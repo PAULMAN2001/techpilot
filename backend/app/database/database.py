@@ -1,116 +1,66 @@
 from __future__ import annotations
 
-from typing import Any
+import uuid
+from datetime import datetime
+from pathlib import Path
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+engine = create_engine(f"sqlite:///{BASE_DIR / 'techpilot.db'}", connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+Base = declarative_base()
 
 
-def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any], network_data: dict[str, Any]) -> tuple[str, list[dict[str, str]]]:
-    findings: list[dict[str, str]] = []
+class DiagnosticRun(Base):
+    __tablename__ = "diagnostic_runs"
 
-    cpu_percent = float(system_data.get("cpu_percent", 0.0) or 0.0)
-    memory_percent = float(system_data.get("memory", {}).get("percent", 0.0) or 0.0)
-    disk_percent = float(storage_data.get("percent", 0.0) or 0.0)
-    interfaces = network_data.get("interfaces") or []
-    local_ip = network_data.get("local_ip")
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow)
+    hostname = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="ok")
+    finding_count = Column(Integer, nullable=False, default=0)
+    findings = relationship("FindingRecord", back_populates="diagnostic_run", cascade="all, delete-orphan")
 
-    if cpu_percent >= 90:
-        findings.append({
-            "category": "Performance",
-            "severity": "HIGH",
-            "title": "High CPU usage",
-            "description": "CPU utilization is significantly elevated.",
-            "evidence": f"CPU usage = {cpu_percent}%",
-            "recommendation": "Investigate active processes and workloads.",
-            "source": "system_analyzer",
-        })
-    elif cpu_percent >= 70:
-        findings.append({
-            "category": "Performance",
-            "severity": "MEDIUM",
-            "title": "Elevated CPU usage",
-            "description": "CPU utilization is above the normal baseline.",
-            "evidence": f"CPU usage = {cpu_percent}%",
-            "recommendation": "Review running applications and background tasks.",
-            "source": "system_analyzer",
-        })
 
-    if memory_percent >= 85:
-        findings.append({
-            "category": "Performance",
-            "severity": "HIGH",
-            "title": "High memory usage",
-            "description": "System memory pressure is elevated.",
-            "evidence": f"Memory usage = {memory_percent}%",
-            "recommendation": "Identify large-memory applications or memory leaks.",
-            "source": "system_analyzer",
-        })
-    elif memory_percent >= 70:
-        findings.append({
-            "category": "Performance",
-            "severity": "MEDIUM",
-            "title": "Elevated memory usage",
-            "description": "Memory usage is above the normal baseline.",
-            "evidence": f"Memory usage = {memory_percent}%",
-            "recommendation": "Check for memory-heavy services or processes.",
-            "source": "system_analyzer",
-        })
+class FindingRecord(Base):
+    __tablename__ = "findings"
 
-    if disk_percent >= 95:
-        findings.append({
-            "category": "Storage",
-            "severity": "CRITICAL",
-            "title": "Critical disk usage",
-            "description": "Disk capacity is nearly exhausted.",
-            "evidence": f"Disk usage = {disk_percent}%",
-            "recommendation": "Free up disk space or expand storage immediately.",
-            "source": "storage_analyzer",
-        })
-    elif disk_percent >= 85:
-        findings.append({
-            "category": "Storage",
-            "severity": "HIGH",
-            "title": "Low storage space",
-            "description": "The available disk space is low.",
-            "evidence": f"Disk usage = {disk_percent}%",
-            "recommendation": "Review large files and remove unnecessary data.",
-            "source": "storage_analyzer",
-        })
-    elif disk_percent >= 70:
-        findings.append({
-            "category": "Storage",
-            "severity": "MEDIUM",
-            "title": "Storage usage elevated",
-            "description": "Disk usage is trending higher than expected.",
-            "evidence": f"Disk usage = {disk_percent}%",
-            "recommendation": "Monitor available space and clean unnecessary files.",
-            "source": "storage_analyzer",
-        })
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    diagnostic_run_id = Column(String, ForeignKey("diagnostic_runs.id"), nullable=False)
+    category = Column(String, nullable=False)
+    severity = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True, default="")
+    evidence = Column(String, nullable=True, default="")
+    recommendation = Column(String, nullable=True, default="")
+    source = Column(String, nullable=True, default="")
+    diagnostic_run = relationship("DiagnosticRun", back_populates="findings")
 
-    if not interfaces:
-        findings.append({
-            "category": "Network",
-            "severity": "HIGH",
-            "title": "No network interfaces detected",
-            "description": "No active network adapters were detected.",
-            "evidence": "No network interfaces available",
-            "recommendation": "Check hardware and adapter configuration.",
-            "source": "network_analyzer",
-        })
-    elif not local_ip:
-        findings.append({
-            "category": "Network",
-            "severity": "MEDIUM",
-            "title": "Local IP address unavailable",
-            "description": "The system could not resolve a local IP address.",
-            "evidence": "Local IP resolution failed",
-            "recommendation": "Inspect network adapter status and connectivity.",
-            "source": "network_analyzer",
-        })
 
-    if not findings:
-        status = "ok"
-    elif any(item["severity"] == "CRITICAL" for item in findings):
-        status = "critical"
-    else:
-        status = "warning"
+def init_db() -> None:
+    Base.metadata.create_all(bind=engine)
 
-    return status, findings
+
+def serialize_run(run: DiagnosticRun) -> dict:
+    return {
+        "id": run.id,
+        "timestamp": run.timestamp.isoformat() if run.timestamp else None,
+        "hostname": run.hostname,
+        "status": run.status,
+        "finding_count": run.finding_count,
+        "findings": [
+            {
+                "id": finding.id,
+                "category": finding.category,
+                "severity": finding.severity,
+                "title": finding.title,
+                "description": finding.description,
+                "evidence": finding.evidence,
+                "recommendation": finding.recommendation,
+                "source": finding.source,
+            }
+            for finding in (run.findings or [])
+        ],
+    }
