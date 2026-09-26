@@ -1,63 +1,56 @@
-# TechPilot
+from fastapi.testclient import TestClient
 
-TechPilot is an AI-powered technical assistant for safe, explainable computer diagnostics. This repository currently implements **Phase 1: a FastAPI backend, SQLite foundation, system diagnostics, and React dashboard**.
+from app.diagnostics.analyzer import analyze_diagnostics
+from app.main import app
 
-## Phase 1 features
+client = TestClient(app)
 
-- CPU, memory, operating-system, storage, and network diagnostics
-- FastAPI endpoints: `/api/health`, `/api/system`, `/api/storage`, `/api/network`
-- SQLite database initialization for future diagnostic history
-- React + TypeScript + Vite dashboard
-- Backend API tests
-- No AI provider, command execution, or automatic system modification
 
-## Run locally
+def test_health():
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
 
-### Backend
 
-```bash
-cd backend
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload
-```
+def test_system_contains_cpu_and_memory():
+    data = client.get("/api/system").json()
+    assert "cpu_percent" in data
+    assert "memory" in data
 
-The API is available at `http://localhost:8000`; interactive docs are at `/docs`.
 
-### Frontend
+def test_storage_has_usage():
+    data = client.get("/api/storage").json()
+    assert data["total_bytes"] > 0
+    assert 0 <= data["percent"] <= 100
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
 
-The dashboard is available at `http://localhost:5173`.
+def test_network_has_interfaces():
+    data = client.get("/api/network").json()
+    assert "interfaces" in data
 
-### Tests
 
-```bash
-cd backend
-pytest
-```
+def test_analyzer_generates_findings():
+    status, findings = analyze_diagnostics(
+        {"cpu_percent": 92, "memory": {"percent": 88}},
+        {"percent": 96},
+        {"hostname": "test-host", "local_ip": "192.168.1.10", "interfaces": [{"name": "Ethernet"}]},
+    )
+    assert status == "critical"
+    assert any(item["title"] == "High CPU usage" for item in findings)
+    assert any(item["title"] == "Critical disk usage" for item in findings)
 
-## Structure
 
-```text
-backend/app/       FastAPI application and diagnostics services
-backend/tests/     API and diagnostic tests
-frontend/src/      React dashboard
-docs/              Architecture and roadmap notes
-```
+def test_diagnostic_run_creates_findings():
+    response = client.post("/api/diagnostics/run")
+    assert response.status_code == 200
+    payload = response.json()
+    assert "status" in payload
+    assert "findings" in payload
+    assert isinstance(payload["findings"], list)
 
-## Safety
 
-TechPilot does not execute commands or modify the host system in Phase 1. Future actions must use an allowlisted registry, explicit permission checks, execution logging, and verification.
-
-## Roadmap
-
-Next: unified diagnostic result schemas and richer system, storage, and network findings. AI troubleshooting and action execution will be added only in later, explicitly planned phases.
-
-Licensed under the MIT License.
+def test_diagnostic_history_available():
+    response = client.get("/api/diagnostics/history?limit=5")
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload, list)

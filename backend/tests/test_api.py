@@ -1,6 +1,7 @@
+from typing import Any
+
 import platform
 import socket
-from typing import Any
 
 import psutil
 from fastapi import APIRouter, Query

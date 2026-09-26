@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 
@@ -19,7 +18,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "HIGH",
             "title": "High CPU usage",
             "description": "CPU utilization is significantly elevated.",
-            "evidence": f"CPU usage = {cpu_percent} %",
+            "evidence": f"CPU usage = {cpu_percent}%",
             "recommendation": "Investigate active processes and workloads.",
             "source": "system_analyzer",
         })
@@ -29,7 +28,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "MEDIUM",
             "title": "Elevated CPU usage",
             "description": "CPU utilization is above the normal baseline.",
-            "evidence": f"CPU usage = {cpu_percent} %",
+            "evidence": f"CPU usage = {cpu_percent}%",
             "recommendation": "Review running applications and background tasks.",
             "source": "system_analyzer",
         })
@@ -40,7 +39,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "HIGH",
             "title": "High memory usage",
             "description": "System memory pressure is elevated.",
-            "evidence": f"Memory usage = {memory_percent} %",
+            "evidence": f"Memory usage = {memory_percent}%",
             "recommendation": "Identify large-memory applications or memory leaks.",
             "source": "system_analyzer",
         })
@@ -50,7 +49,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "MEDIUM",
             "title": "Elevated memory usage",
             "description": "Memory usage is above the normal baseline.",
-            "evidence": f"Memory usage = {memory_percent} %",
+            "evidence": f"Memory usage = {memory_percent}%",
             "recommendation": "Check for memory-heavy services or processes.",
             "source": "system_analyzer",
         })
@@ -61,7 +60,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "CRITICAL",
             "title": "Critical disk usage",
             "description": "Disk capacity is nearly exhausted.",
-            "evidence": f"Disk usage = {disk_percent} %",
+            "evidence": f"Disk usage = {disk_percent}%",
             "recommendation": "Free up disk space or expand storage immediately.",
             "source": "storage_analyzer",
         })
@@ -71,7 +70,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "HIGH",
             "title": "Low storage space",
             "description": "The available disk space is low.",
-            "evidence": f"Disk usage = {disk_percent} %",
+            "evidence": f"Disk usage = {disk_percent}%",
             "recommendation": "Review large files and remove unnecessary data.",
             "source": "storage_analyzer",
         })
@@ -81,7 +80,7 @@ def analyze_diagnostics(system_data: dict[str, Any], storage_data: dict[str, Any
             "severity": "MEDIUM",
             "title": "Storage usage elevated",
             "description": "Disk usage is trending higher than expected.",
-            "evidence": f"Disk usage = {disk_percent} %",
+            "evidence": f"Disk usage = {disk_percent}%",
             "recommendation": "Monitor available space and clean unnecessary files.",
             "source": "storage_analyzer",
         })
