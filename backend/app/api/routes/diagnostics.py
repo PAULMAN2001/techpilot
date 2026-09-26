@@ -101,14 +101,15 @@ def run_full_diagnostics() -> dict[str, Any]:
                     source=finding["source"],
                 )
             )
-
-    return {
-        "id": run.id,
-        "timestamp": run.timestamp.isoformat(),
-        "hostname": run.hostname,
-        "status": run.status,
-        "findings": findings,
-    }
+        session.commit()
+        
+        return {
+            "id": run.id,
+            "timestamp": run.timestamp.isoformat(),
+            "hostname": run.hostname,
+            "status": run.status,
+            "findings": findings,
+        }
 
 
 @router.get("/diagnostics/latest")
