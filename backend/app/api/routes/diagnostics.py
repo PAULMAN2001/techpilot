@@ -79,7 +79,8 @@ def run_full_diagnostics() -> dict[str, Any]:
     network_data = network_diagnostics()
     status, findings = analyze_diagnostics(system_data, storage_data, network_data)
 
-    with SessionLocal.begin() as session:
+    session = SessionLocal()
+    try:
         run = DiagnosticRun(
             hostname=network_data.get("hostname", "unknown-host"),
             status=status,
@@ -103,13 +104,18 @@ def run_full_diagnostics() -> dict[str, Any]:
             )
         session.commit()
         
-        return {
+        # Extract data while session is still active
+        response_data = {
             "id": run.id,
             "timestamp": run.timestamp.isoformat(),
             "hostname": run.hostname,
             "status": run.status,
             "findings": findings,
         }
+    finally:
+        session.close()
+    
+    return response_data
 
 
 @router.get("/diagnostics/latest")
